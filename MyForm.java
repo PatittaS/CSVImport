@@ -1,5 +1,7 @@
 package main;
 
+import static java.lang.System.out;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -7,8 +9,12 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -43,7 +49,7 @@ public class MyForm extends JFrame {
 	private JTable table;
 	private DefaultTableModel dm;
 	private JProgressBar loading;
-	private BackgroundWorker work = new BackgroundWorker();
+	private BackgroundWorker work;
 	String textSection = "";
 	String type ="";
 	File file;
@@ -52,6 +58,15 @@ public class MyForm extends JFrame {
 	int progress = 0;
 	Database db = new Database();
 	Connection connect = null;
+	
+	/**
+	 *Created by Meranote on 7/13/2017.
+	 * **/
+	private JFileChooser fileopen;
+	private File currentFile = null;
+    private File targetFile = null;
+    private boolean newFileSelectedFlag = false;
+    public static final MyForm instance = new MyForm();
 
 	public static void main(String[] args) {
 		EventQueue.invokeLater(new Runnable() {
@@ -476,7 +491,7 @@ public class MyForm extends JFrame {
 
 			               GroupableTableColumnModel cm = (GroupableTableColumnModel)table.getColumnModel();
 			    		    
-			    		    ColumnGroup g_ch = new ColumnGroup("�ѵ�ҡ����������");
+			    		    ColumnGroup g_ch = new ColumnGroup("อัตราการใช้สารเคมี");
 			    		    g_ch.add(cm.getColumn(6));
 			    		    ColumnGroup g_cato = new ColumnGroup("Cato");
 			    		    g_cato.add(cm.getColumn(7));
@@ -499,28 +514,28 @@ public class MyForm extends JFrame {
 			    		    g_ch.add(g_sil);
 			    		    g_ch.add(g_apam);
 			    		    
-			    		    ColumnGroup g_reten = new ColumnGroup("�š���Ѵ Retention");
+			    		    ColumnGroup g_reten = new ColumnGroup("ผลการวัด Retention");
 			    		    g_reten.add(cm.getColumn(17));
 			    		    g_reten.add(cm.getColumn(18));
 			    		    g_reten.add(cm.getColumn(19));
 			    		    g_reten.add(cm.getColumn(20));
 			    		    
-			    		    ColumnGroup g_color = new ColumnGroup("�ѵ�ҡ������");
+			    		    ColumnGroup g_color = new ColumnGroup("อัตราการใช้สี");
 			    		    g_color.add(cm.getColumn(21));
-			    		    ColumnGroup g_blue = new ColumnGroup("�չ���Թ (Blue)");
+			    		    ColumnGroup g_blue = new ColumnGroup("สีน้ำเงิน (Blue)");
 			    		    g_blue.add(cm.getColumn(22));
 			    		    g_blue.add(cm.getColumn(23));
-			    		    ColumnGroup g_violet = new ColumnGroup("����ǧ (Violet)");
+			    		    ColumnGroup g_violet = new ColumnGroup("สีม่วง (Violet)");
 			    		    g_violet.add(cm.getColumn(24));
 			    		    g_violet.add(cm.getColumn(25));
-			    		    ColumnGroup g_red = new ColumnGroup("��ᴧ (Red)");
+			    		    ColumnGroup g_red = new ColumnGroup("สีแดง (Red)");
 			    		    g_red.add(cm.getColumn(26));
 			    		    g_red.add(cm.getColumn(27));
 			    		    g_color.add(g_blue);
 			    		    g_color.add(g_violet);
 			    		    g_color.add(g_red);
 			    		    
-			    		    ColumnGroup g_oba = new ColumnGroup("�ѵ�ҡ����  OBA");
+			    		    ColumnGroup g_oba = new ColumnGroup("อัตราการใช้  OBA");
 			    		    g_oba.add(cm.getColumn(28));
 			    		    ColumnGroup g_wet = new ColumnGroup("Wet end");
 			    		    g_wet.add(cm.getColumn(29));
@@ -528,8 +543,8 @@ public class MyForm extends JFrame {
 			    		    g_oba.add(g_wet);
 			    		    g_oba.add(cm.getColumn(31));
 			    		    
-			    		    ColumnGroup g_dcs = new ColumnGroup("�š���Ѵ�� DCS");
-			    		    ColumnGroup g_dcsTop = new ColumnGroup("DCS (TOP UV INC) �Ѵ����ʧ UV");
+			    		    ColumnGroup g_dcs = new ColumnGroup("ผลการวัดสี DCS");
+			    		    ColumnGroup g_dcsTop = new ColumnGroup("DCS (TOP UV INC) วัดรวมแสง UV");
 			    		    g_dcsTop.add(cm.getColumn(36));
 			    		    g_dcsTop.add(cm.getColumn(37));
 			    		    g_dcsTop.add(cm.getColumn(38));
@@ -538,7 +553,7 @@ public class MyForm extends JFrame {
 			    		    g_dcsTop.add(cm.getColumn(41));
 			    		    g_dcs.add(g_dcsTop);
 			    		    
-			    		    ColumnGroup g_test = new ColumnGroup("�� Test Lab");
+			    		    ColumnGroup g_test = new ColumnGroup("ผล Test Lab");
 			    		    ColumnGroup g_rou = new ColumnGroup("Roughness");
 			    		    g_rou.add(cm.getColumn(42));
 			    		    g_rou.add(cm.getColumn(43));
@@ -548,7 +563,7 @@ public class MyForm extends JFrame {
 			    		    g_cubb.add(cm.getColumn(45));
 			    		    g_test.add(g_cubb);
 			    		    g_test.add(cm.getColumn(46));
-			    		    ColumnGroup g_colorPaper = new ColumnGroup("�ա�д��");
+			    		    ColumnGroup g_colorPaper = new ColumnGroup("สีกระดาษ");
 			    		    g_colorPaper.add(cm.getColumn(47));
 			    		    g_colorPaper.add(cm.getColumn(48));
 			    		    g_colorPaper.add(cm.getColumn(49));
@@ -641,7 +656,7 @@ public class MyForm extends JFrame {
 	    		   type="winder";
 	    		   dm.setColumnIdentifiers(new Object[]{"Section","Day","Month","Year","Paper Machine","Winder","Design"
 	    				   ,"Plan","Actual","P Rate","Winder Opt.","CD","CR","CO","CS","DR","EC","HL","LS","OD","PV","RI","SB"
-	    				   ,"SD","SL","SP","ST","SM","WK","OT","�������⤹ Spoon","Sheet Break PM/SCD"
+	    				   ,"SD","SL","SP","ST","SM","WK","OT","ความยาวโคน Spoon","Sheet Break PM/SCD"
 	    				   ,"Winder Trim","Q Rate","SH/B","Opt it.","BD/Elec&Ir","M/C Idle","Uncon"
 	    				   ,"Clean","Plan SD","A Rate","OEE"});
 			               GroupableTableColumnModel cm = (GroupableTableColumnModel)table.getColumnModel();
@@ -713,7 +728,7 @@ public class MyForm extends JFrame {
 		btnButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 
-				JFileChooser fileopen = new JFileChooser();
+				fileopen = new JFileChooser();
 				FileFilter filter = new FileNameExtensionFilter(
 						"CSV file", "csv");
 				fileopen.addChoosableFileFilter(filter);
@@ -721,17 +736,31 @@ public class MyForm extends JFrame {
 				int ret = fileopen.showDialog(null, "Choose file");
 
 				if (ret == JFileChooser.APPROVE_OPTION) {
-
-					// Read Text file
-					//BackgroundWorker work = new BackgroundWorker();
-					file = fileopen.getSelectedFile();
-					EventQueue.invokeLater(new Runnable() {
+					setTargetFile(fileopen.getSelectedFile());
+		            newFileSelectedFlag = true;
+		            //new BackgroundWorker(instance).execute();
+		            EventQueue.invokeLater(new Runnable() {
 						@Override
 						public void run() {
-							BackgroundWorker work = new BackgroundWorker();
-							work.execute();
+								work = new BackgroundWorker();
+								work.execute();
+							
 						}
 					});
+					// Read Text file
+					//file = fileopen.getSelectedFile();
+					/*EventQueue.invokeLater(new Runnable() {
+						@Override
+						public void run() {
+							if(work==null || work.isDone()){
+								work = new BackgroundWorker();
+								work.execute();
+							}else{
+								work.cancel(true);
+							}
+							
+						}
+					});*/
 					lblResult.setText(fileopen.getSelectedFile().toString());
 				}
 
@@ -781,11 +810,8 @@ public class MyForm extends JFrame {
 		//Cancel Table
 		Cancel.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent e){
-				/*scroll.setViewportView(null);
-	    		   dm.setRowCount(0);*/
-				System.exit(0);
-				MyForm form = new MyForm();
-				form.setVisible(true);
+				scroll.setViewportView(null);
+	    		   dm.setRowCount(0);
 			}
 		});
 
@@ -1261,31 +1287,181 @@ public class MyForm extends JFrame {
 
 	}
 	
-	public class BackgroundWorker extends SwingWorker<Void, Void> {
 
-		public BackgroundWorker() {
-			addPropertyChangeListener(new PropertyChangeListener() {
-				@Override
-				public void propertyChange(PropertyChangeEvent evt) {
-					loading.setValue(getProgress());
-				}
+    /**
+     * Get current file
+     * @return
+     */
+    public File getCurrentFile() {
+        return currentFile;
+    }
 
-			});
-		}
+    /**
+     * Set current file
+     * @param currentFile
+     */
+    public void setCurrentFile(File currentFile) {
+        this.currentFile = currentFile;
+    }
+
+    /**
+     * Get target file
+     * @return
+     */
+    public File getTargetFile() {
+        return targetFile;
+    }
+
+    /**
+     * Set target file
+     * @param targetFile
+     */
+    public void setTargetFile(File targetFile) {
+        this.targetFile = targetFile;
+        System.out.print("Target file: " + targetFile.getAbsoluteFile());
+    }
+
+    /**
+     * Is new file has been selected
+     * @return
+     */
+    public boolean isNewFileSelected() {
+        return newFileSelectedFlag;
+    }
+
+    /**
+     * Set new file selected flag
+     * @param flag
+     */
+    public void setNewFileSelectedFlag(boolean flag) {
+        this.newFileSelectedFlag = flag;
+    }
+
+	
+public class BackgroundWorker extends SwingWorker<Void, Void> {
+
+			private MyForm application;
+		    private String lastProcessedChecksum = "";
+
+		    /**
+		     * File watcher constructor
+		     * @param instance
+		     */
+		    public BackgroundWorker() {
+		        //application = instance;
+		        addPropertyChangeListener(evt -> {
+		            loading.setValue(getProgress());
+		        });
+		    }
+
 
 		@Override
 		protected void done() {
-			
-			work.cancel(true);
-			JOptionPane.showMessageDialog(null,"Import Data Successfully");
+			if(!this.isCancelled()){
+				JOptionPane.showMessageDialog(null,"Import Data Successfully");
 			//btnButton.setEnabled(true);
+			}
 		}
 
 		protected Void doInBackground() throws Exception {
 			
+			 // Forever loop
+	        while(true) {
+	            // Is new file have been selected
+	            if(isNewFileSelected()) {
+	                out.println("New file selected!");
+	                setNewFileSelectedFlag(false);
+
+	                // Check is the last same processed file
+	                String targetChecksum = MD5Checksum.getMD5Checksum(getTargetFile());
+	                out.println(lastProcessedChecksum + " : " + targetChecksum);
+
+	                if(!targetChecksum.equals(lastProcessedChecksum)) {
+	                    out.println("File updated!");
+
+	                    // if not, process new file
+	                    lastProcessedChecksum = targetChecksum;
+	                    setCurrentFile(getTargetFile());
+	            		try {
+	        				BufferedReader br = new BufferedReader(new FileReader(getTargetFile()));
+	        				br.readLine();
+	        				int one = br.readLine().length();
+	        				br.readLine();
+	        				int two = br.readLine().length();
+	        				br.readLine();//read first line to no read header column in .CSV
+	        				int three = br.readLine().length();
+	        				String line =null;
+	        				int column = dm.getColumnCount();
+	        				int row = 0;
+	        				while ((line = br.readLine()) != null) {
+	        					total = file.length();
+	        					total = total - (one+two+three);
+	        					progress = (int)((currentNum*100/total))+1;
+	        					currentNum += (int)line.length();
+	        					System.out.println((int)((currentNum*100/total))+1 +"\n");
+	        					setProgress((int)((currentNum*100/total))+1);
+	        					Thread.sleep(50);
+	        					String[] arr = line.split(",",-1);
+	        					dm.addRow(new Object[0]);
+	        					String day = arr[0];
+	        					String month = arr[1];
+	        					String year = arr[2];
+	        					String time =arr[3];
+	        					if(time.equals("")){
+	        						dm.removeRow(row);
+	        						break;
+	        					}		
+	        					if(day.equals("")&&month.equals("")&&year.equals("")){
+	        						if(time.equals("")){
+	        							break;
+	        						}
+	        						dm.setValueAt(dm.getValueAt(row-1, 0), row, 0);
+	        						dm.setValueAt(dm.getValueAt(row-1, 1), row, 1);
+	        						dm.setValueAt(dm.getValueAt(row-1, 2), row, 2);
+	        						for(int i=3 ; i< column ; i++){
+	        							if(arr[i].equals("") ){
+	        								if(db.DataType(i+1, type)){
+	        									dm.setValueAt(0, row, i);
+	        								}else{dm.setValueAt(arr[i], row, i);}
+	        							}else{
+	        							dm.setValueAt(arr[i], row, i);
+	        							}
+	        						}
+	        					}else{
+	        						for(int i=0 ; i< column ; i++){
+	        							if(arr[i].equals("") ){
+	        								if(db.DataType(i+1, type)){
+	        									dm.setValueAt(0, row, i);
+	        								}
+	        								else{
+	        									dm.setValueAt(arr[i], row, i);
+	        								}
+	        							}else{
+	        								dm.setValueAt(arr[i], row, i);
+	        							}
+	        						}
+	        					}
+	        					row++;
+	        				}
+	        				setProgress(100);
+	        				br.close();
+	        				
+	        			} catch (IOException ex) {
+	        				// TODO Auto-generated catch block
+	        				ex.printStackTrace();
+	        			}	
+	            		out.println("What!!!");
+
+	                } else {
+	                    out.println("Same file selected!");
+	                }
+	                Thread.sleep(10);
+	            }
+	        }
+	         /*
 			// Read Text File
 			try {
-				BufferedReader br = new BufferedReader(new FileReader(file));
+				BufferedReader br = new BufferedReader(new FileReader(application.getTargetFile()));
 				br.readLine();
 				int one = br.readLine().length();
 				br.readLine();
@@ -1302,9 +1478,8 @@ public class MyForm extends JFrame {
 					//System.out.print("Row : "+row+"Current : "+currentNum +" Total : "+total+"progress : "+ progress+"\n");
 					//loading.setValue(progress);
 					currentNum += (int)line.length();
-					setProgress(progress);
 					//setProgress((int)((currentNum*100/total))+1);
-					Thread.sleep(10);
+					//Thread.sleep(10);
 					String[] arr = line.split(",",-1);
 					dm.addRow(new Object[0]);
 					String day = arr[0];
@@ -1350,14 +1525,19 @@ public class MyForm extends JFrame {
 					}
 					row++;
 				}
-				setProgress(100);
+				//setProgress(100);
 				br.close();
 			} catch (IOException ex) {
 				// TODO Auto-generated catch block
 				ex.printStackTrace();
 			}	
-			return null;
+			   // Sleep thread, prevent some wried loop not work
+            Thread.sleep(10);
+	            }
+	        }
 		}
-		
+	        }*/
+		}
 	}
+		
 }
