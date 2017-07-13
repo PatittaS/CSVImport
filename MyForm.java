@@ -46,18 +46,18 @@ public class MyForm extends JFrame {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private JTable table;
-	private DefaultTableModel dm;
-	private JProgressBar loading;
-	private BackgroundWorker work;
+	public JTable table;
+	public DefaultTableModel dm;
+	public final JProgressBar loading;
 	String textSection = "";
-	String type ="";
+	public String type ="";
 	File file;
-	long total=0;
-	long currentNum=0;
-	int progress = 0;
-	Database db = new Database();
+	public long total=0;
+	public long currentNum=0;
+	public int progress = 0;
+	public Database db = new Database();
 	Connection connect = null;
+	public boolean check=false;
 	
 	/**
 	 *Created by Meranote on 7/13/2017.
@@ -66,13 +66,15 @@ public class MyForm extends JFrame {
 	private File currentFile = null;
     private File targetFile = null;
     private boolean newFileSelectedFlag = false;
-    public static final MyForm instance = new MyForm();
+    public static MyForm instance = new MyForm();
 
 	public static void main(String[] args) {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
-				MyForm form = new MyForm();
-				form.setVisible(true);
+				//MyForm form = new MyForm();
+				instance.setVisible(true);
+				BackgroundWorker work = new BackgroundWorker(instance);
+						work.execute();
 			}
 		});
 	}
@@ -739,28 +741,17 @@ public class MyForm extends JFrame {
 					setTargetFile(fileopen.getSelectedFile());
 		            newFileSelectedFlag = true;
 		            //new BackgroundWorker(instance).execute();
-		            EventQueue.invokeLater(new Runnable() {
+		           /*if(check==false){
+		        	   EventQueue.invokeLater(new Runnable() {
 						@Override
 						public void run() {
 								work = new BackgroundWorker();
 								work.execute();
-							
+						
 						}
 					});
-					// Read Text file
-					//file = fileopen.getSelectedFile();
-					/*EventQueue.invokeLater(new Runnable() {
-						@Override
-						public void run() {
-							if(work==null || work.isDone()){
-								work = new BackgroundWorker();
-								work.execute();
-							}else{
-								work.cancel(true);
-							}
-							
-						}
-					});*/
+		        	   check=true;
+		          }*/
 					lblResult.setText(fileopen.getSelectedFile().toString());
 				}
 
@@ -1336,208 +1327,6 @@ public class MyForm extends JFrame {
     public void setNewFileSelectedFlag(boolean flag) {
         this.newFileSelectedFlag = flag;
     }
-
-	
-public class BackgroundWorker extends SwingWorker<Void, Void> {
-
-			private MyForm application;
-		    private String lastProcessedChecksum = "";
-
-		    /**
-		     * File watcher constructor
-		     * @param instance
-		     */
-		    public BackgroundWorker() {
-		        //application = instance;
-		        addPropertyChangeListener(evt -> {
-		            loading.setValue(getProgress());
-		        });
-		    }
-
-
-		@Override
-		protected void done() {
-			if(!this.isCancelled()){
-				JOptionPane.showMessageDialog(null,"Import Data Successfully");
-			//btnButton.setEnabled(true);
-			}
-		}
-
-		protected Void doInBackground() throws Exception {
-			
-			 // Forever loop
-	        while(true) {
-	            // Is new file have been selected
-	            if(isNewFileSelected()) {
-	                out.println("New file selected!");
-	                setNewFileSelectedFlag(false);
-
-	                // Check is the last same processed file
-	                String targetChecksum = MD5Checksum.getMD5Checksum(getTargetFile());
-	                out.println(lastProcessedChecksum + " : " + targetChecksum);
-
-	                if(!targetChecksum.equals(lastProcessedChecksum)) {
-	                    out.println("File updated!");
-
-	                    // if not, process new file
-	                    lastProcessedChecksum = targetChecksum;
-	                    setCurrentFile(getTargetFile());
-	            		try {
-	        				BufferedReader br = new BufferedReader(new FileReader(getTargetFile()));
-	        				br.readLine();
-	        				int one = br.readLine().length();
-	        				br.readLine();
-	        				int two = br.readLine().length();
-	        				br.readLine();//read first line to no read header column in .CSV
-	        				int three = br.readLine().length();
-	        				String line =null;
-	        				int column = dm.getColumnCount();
-	        				int row = 0;
-	        				while ((line = br.readLine()) != null) {
-	        					total = file.length();
-	        					total = total - (one+two+three);
-	        					progress = (int)((currentNum*100/total))+1;
-	        					currentNum += (int)line.length();
-	        					System.out.println((int)((currentNum*100/total))+1 +"\n");
-	        					setProgress((int)((currentNum*100/total))+1);
-	        					Thread.sleep(50);
-	        					String[] arr = line.split(",",-1);
-	        					dm.addRow(new Object[0]);
-	        					String day = arr[0];
-	        					String month = arr[1];
-	        					String year = arr[2];
-	        					String time =arr[3];
-	        					if(time.equals("")){
-	        						dm.removeRow(row);
-	        						break;
-	        					}		
-	        					if(day.equals("")&&month.equals("")&&year.equals("")){
-	        						if(time.equals("")){
-	        							break;
-	        						}
-	        						dm.setValueAt(dm.getValueAt(row-1, 0), row, 0);
-	        						dm.setValueAt(dm.getValueAt(row-1, 1), row, 1);
-	        						dm.setValueAt(dm.getValueAt(row-1, 2), row, 2);
-	        						for(int i=3 ; i< column ; i++){
-	        							if(arr[i].equals("") ){
-	        								if(db.DataType(i+1, type)){
-	        									dm.setValueAt(0, row, i);
-	        								}else{dm.setValueAt(arr[i], row, i);}
-	        							}else{
-	        							dm.setValueAt(arr[i], row, i);
-	        							}
-	        						}
-	        					}else{
-	        						for(int i=0 ; i< column ; i++){
-	        							if(arr[i].equals("") ){
-	        								if(db.DataType(i+1, type)){
-	        									dm.setValueAt(0, row, i);
-	        								}
-	        								else{
-	        									dm.setValueAt(arr[i], row, i);
-	        								}
-	        							}else{
-	        								dm.setValueAt(arr[i], row, i);
-	        							}
-	        						}
-	        					}
-	        					row++;
-	        				}
-	        				setProgress(100);
-	        				br.close();
-	        				
-	        			} catch (IOException ex) {
-	        				// TODO Auto-generated catch block
-	        				ex.printStackTrace();
-	        			}	
-	            		out.println("What!!!");
-
-	                } else {
-	                    out.println("Same file selected!");
-	                }
-	                Thread.sleep(10);
-	            }
-	        }
-	         /*
-			// Read Text File
-			try {
-				BufferedReader br = new BufferedReader(new FileReader(application.getTargetFile()));
-				br.readLine();
-				int one = br.readLine().length();
-				br.readLine();
-				int two = br.readLine().length();
-				br.readLine();//read first line to no read header column in .CSV
-				int three = br.readLine().length();
-				String line =null;
-				int column = dm.getColumnCount();
-				int row = 0;
-				while ((line = br.readLine()) != null) {
-					total = file.length();
-					total = total - (one+two+three);
-					progress = (int)((currentNum*100/total))+1;
-					//System.out.print("Row : "+row+"Current : "+currentNum +" Total : "+total+"progress : "+ progress+"\n");
-					//loading.setValue(progress);
-					currentNum += (int)line.length();
-					//setProgress((int)((currentNum*100/total))+1);
-					//Thread.sleep(10);
-					String[] arr = line.split(",",-1);
-					dm.addRow(new Object[0]);
-					String day = arr[0];
-					String month = arr[1];
-					String year = arr[2];
-					String time =arr[3];
-					if(time.equals("")){
-						dm.removeRow(row);
-						break;
-					}		
-					if(day.equals("")&&month.equals("")&&year.equals("")){
-						if(time.equals("")){
-							break;
-						}
-						dm.setValueAt(dm.getValueAt(row-1, 0), row, 0);
-						dm.setValueAt(dm.getValueAt(row-1, 1), row, 1);
-						dm.setValueAt(dm.getValueAt(row-1, 2), row, 2);
-						for(int i=3 ; i< column ; i++){
-							if(arr[i].equals("") ){
-								if(db.DataType(i+1, type)){
-									dm.setValueAt(0, row, i);
-								}else{dm.setValueAt(arr[i], row, i);}
-							}else{
-							dm.setValueAt(arr[i], row, i);
-							}
-						}
-					}else{
-						for(int i=0 ; i< column ; i++){
-							if(arr[i].equals("") ){
-								if(db.DataType(i+1, type)){
-									dm.setValueAt(0, row, i);
-								}
-								else{
-									dm.setValueAt(arr[i], row, i);
-								}
-							}else{
-								dm.setValueAt(arr[i], row, i);
-							}
-						}
-						//JOptionPane.showMessageDialog(null,"Import Data Successfully");
-				        //loading.setValue(progress);
-				     
-					}
-					row++;
-				}
-				//setProgress(100);
-				br.close();
-			} catch (IOException ex) {
-				// TODO Auto-generated catch block
-				ex.printStackTrace();
-			}	
-			   // Sleep thread, prevent some wried loop not work
-            Thread.sleep(10);
-	            }
-	        }
-		}
-	        }*/
-		}
-	}
+ 
 		
 }
