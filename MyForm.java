@@ -8,6 +8,7 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 
 import static java.lang.System.out;
 
@@ -23,6 +24,8 @@ import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
@@ -35,6 +38,11 @@ import GroupTable.GroupableTableHeader;
 
 public class MyForm extends JFrame {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private JFrame frame;
 	public JProgressBar loading;
 	public DefaultTableModel dm;
 	public JTable table;
@@ -43,6 +51,7 @@ public class MyForm extends JFrame {
 	public JFileChooser fileopen;
 	public static MyForm instance = new MyForm();
 	public File file;
+	public JButton btnButton;
 	
 	/**
 	 *Created by Meranote on 7/13/2017.
@@ -50,21 +59,23 @@ public class MyForm extends JFrame {
 	private File currentFile = null;
     private File targetFile = null;
     private boolean newFileSelectedFlag = false;
-	
-	public static void main(String[] args) {
-		instance.showWindow();
-	}
 
-	public MyForm() {
+	private MyForm() {
 
 		// Create Form Frame
 		super("CSV Import");
+		// Get look & feel
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            JFrame.setDefaultLookAndFeelDecorated(true);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 		setBackground(Color.WHITE);
 		getContentPane().setForeground(Color.GRAY);
 		setSize(1200, 600);
 		setLocation(500, 280);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setIconImage(Toolkit.getDefaultToolkit().getImage("main/logo-04.png"));
 		setResizable(false);
 		getContentPane().setLayout(null);
 		getContentPane().setBackground(Color.WHITE); 
@@ -72,6 +83,7 @@ public class MyForm extends JFrame {
 		//loading Bar
 		loading = new JProgressBar();
 		loading.setBounds(0, 0, 1194, 19);
+		loading.setValue(0);
 		loading.setStringPainted(true);
 		getContentPane().add(loading);
 
@@ -128,7 +140,7 @@ public class MyForm extends JFrame {
          table.setModel(dm);
          
         // Create Button Open JFileChooser
- 		JButton btnButton = new JButton("Browse");
+ 		btnButton = new JButton("Browse");
  		btnButton.setFont(new Font("Tahoma", Font.PLAIN, 16));
  		btnButton.setBounds(794, 131, 135, 47);
  		btnButton.setBackground(SystemColor.activeCaption);
@@ -144,7 +156,7 @@ public class MyForm extends JFrame {
 		
 		//Logo SCG Packaging
 		JLabel lblNewLabel = new JLabel("New label");
-		lblNewLabel.setIcon(new ImageIcon(MyForm.class.getResource("/manin/logo-03.png")));
+		lblNewLabel.setIcon(new ImageIcon(MyForm.class.getResource("/Manin/logo-03.png")));
 		lblNewLabel.setBounds(474, 11, 214, 127);
 		getContentPane().add(lblNewLabel);
 		
@@ -731,19 +743,28 @@ public class MyForm extends JFrame {
 		 */
 		btnButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				dm.setRowCount(0);
+				btnButton.setEnabled(false);
 
 				FileFilter filter = new FileNameExtensionFilter(
 						"CSV file", "csv");
 				fileopen.addChoosableFileFilter(filter);
 
-				int ret = fileopen.showOpenDialog(null);
+				int ret = fileopen.showOpenDialog(frame);
 
 				if (ret == JFileChooser.APPROVE_OPTION) {
 					out.println("File Choose");
+					/*
+					setTargetFile(fileopen.getSelectedFile());
+					lblResult.setText(fileopen.getSelectedFile().toString());
+		            newFileSelectedFlag = true;*/
+
+					
 					file = fileopen.getSelectedFile();
+					lblResult.setText(fileopen.getSelectedFile().toString());
 					ReadFile rd = new ReadFile(instance);
 					rd.runReadFile();
-					lblResult.setText(fileopen.getSelectedFile().toString());
+					
 				}
 
 			}
@@ -777,6 +798,7 @@ public class MyForm extends JFrame {
 			public void actionPerformed(ActionEvent e){
 				scroll.setViewportView(null);
 			    dm.setRowCount(0);
+			    lblResult.setText("");
 			}
 		});
 				
@@ -792,27 +814,86 @@ public class MyForm extends JFrame {
 	}
 	
 	public void UploadWetEnd(){
+		new Upload(instance).WetEnd();
 		out.println("UploadWet End log sheet");
 	}
 	
 	public void UploadDryend(){
+		new Upload(instance).dryend();
 		out.println("Upload Dryend log sheet");
 	}
 	
 	public void UploadChemical(){
+		new Upload(instance).chemical();
 		out.println("Upload Chemical Control log sheet");
 	}
 	
 	public void UploadStockApp(){
+		new Upload(instance).StockApp();
 		out.println("Upload Stock Approaching log sheet");
 	}
 	
 	public void UploadWinder(){
+		new Upload(instance).Winder();
 		out.println("Upload Winder log sheet");
 	}
 	
 	public void UploadStockUnit(){
+		new Upload(instance).StockUnit();
 		out.println("Upload Stock Unit use");
 	}
+	
+	 /**
+     * Get current file
+     * @return
+     */
+    public File getCurrentFile() {
+        return currentFile;
+    }
 
-}
+    /**
+     * Set current file
+     * @param currentFile
+     */
+    public void setCurrentFile(File currentFile) {
+        this.currentFile = currentFile;
+    }
+
+    /**
+     * Get target file
+     * @return
+     */
+    public File getTargetFile() {
+        return targetFile;
+    }
+
+    /**
+     * Set target file
+     * @param targetFile
+     */
+    public void setTargetFile(File targetFile) {
+        this.targetFile = targetFile;
+    }
+
+    /**
+     * Is new file has been selected
+     * @return
+     */
+    public boolean isNewFileSelected() {
+        return newFileSelectedFlag;
+    }
+
+    /**
+     * Set new file selected flag
+     * @param flag
+     */
+    public void setNewFileSelectedFlag(boolean flag) {
+        this.newFileSelectedFlag = flag;
+    }
+    
+	public static void main(String[] args) {
+		instance.showWindow();
+		/*BackgroundWorker work = new BackgroundWorker(instance);
+		work.execute();*/
+	}
+ }
